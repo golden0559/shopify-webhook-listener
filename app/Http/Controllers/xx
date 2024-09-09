@@ -1,0 +1,118 @@
+### HubSpot-Shopify Webhook Project Updated Code
+
+#### Laravel Controller for Handling Webhooks
+
+```php
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+
+class HubspotShopifyWebhookController extends Controller
+{
+    // Handle incoming HubSpot webhooks
+    public function handleHubspotWebhook(Request $request)
+    {
+        $data = $request->all();
+
+        // Log the webhook data for debugging purposes
+        Log::info('HubSpot Webhook Received:', $data);
+
+        // Verify the request (optional, based on shared secret if configured)
+        // $isValid = hash_equals($data['secret'] ?? '', env('HUBSPOT_WEBHOOK_SECRET'));
+        // if (!$isValid) {
+        //     return response()->json(['error' => 'Invalid webhook signature'], 403);
+        // }
+
+        // Process the event based on its type
+        if ($data['subscriptionType'] === 'contact.creation') {
+            $this->processHubspotContactCreation($data);
+        } elseif ($data['subscriptionType'] === 'deal.creation') {
+            $this->processHubspotDealCreation($data);
+        }
+
+        return response()->json(['status' => 'success'], 200);
+    }
+
+    private function processHubspotContactCreation($data)
+    {
+        Log::info('Processing HubSpot Contact Creation:', $data);
+        // Add logic to sync the contact to Shopify or handle the event
+    }
+
+    private function processHubspotDealCreation($data)
+    {
+        Log::info('Processing HubSpot Deal Creation:', $data);
+        // Add logic to sync the deal to Shopify or handle the event
+    }
+
+    // Handle incoming Shopify webhooks
+    public function handleShopifyWebhook(Request $request)
+    {
+        $data = $request->all();
+
+        // Log the webhook data for debugging purposes
+        Log::info('Shopify Webhook Received:', $data);
+
+        // Verify the Shopify HMAC signature (security check)
+        $hmacHeader = $request->header('X-Shopify-Hmac-Sha256');
+        $calculatedHmac = base64_encode(hash_hmac('sha256', $request->getContent(), env('SHOPIFY_WEBHOOK_SECRET'), true));
+
+        if (!hash_equals($hmacHeader, $calculatedHmac)) {
+            return response()->json(['error' => 'Invalid webhook signature'], 403);
+        }
+
+        // Process the event based on its type
+        if ($data['topic'] === 'orders/create') {
+            $this->processShopifyOrderCreation($data);
+        } elseif ($data['topic'] === 'customers/create') {
+            $this->processShopifyCustomerCreation($data);
+        }
+
+        return response()->json(['status' => 'success'], 200);
+    }
+
+    private function processShopifyOrderCreation($data)
+    {
+        Log::info('Processing Shopify Order Creation:', $data);
+        // Add logic to sync the order to HubSpot or handle the event
+    }
+
+    private function processShopifyCustomerCreation($data)
+    {
+        Log::info('Processing Shopify Customer Creation:', $data);
+        // Add logic to sync the customer to HubSpot or handle the event
+    }
+}
+```
+
+#### Laravel Routes
+
+```php
+use App\Http\Controllers\HubspotShopifyWebhookController;
+
+Route::post('/webhooks/hubspot', [HubspotShopifyWebhookController::class, 'handleHubspotWebhook']);
+Route::post('/webhooks/shopify', [HubspotShopifyWebhookController::class, 'handleShopifyWebhook']);
+```
+
+#### Environment Variables (.env)
+
+```env
+HUBSPOT_WEBHOOK_SECRET=your_hubspot_shared_secret
+SHOPIFY_WEBHOOK_SECRET=your_shopify_webhook_secret
+```
+
+#### Notes:
+1. **HubSpot Webhook Setup**:
+   - Configure HubSpot to send webhooks to `/webhooks/hubspot`.
+   - Use the private app access token to authorize API calls.
+2. **Shopify Webhook Setup**:
+   - Register Shopify webhooks in the custom app setup and point them to `/webhooks/shopify`.
+   - Add topics like `orders/create`, `customers/create`, etc.
+3. **Security**:
+   - Ensure secrets (`HUBSPOT_WEBHOOK_SECRET` and `SHOPIFY_WEBHOOK_SECRET`) are securely stored in `.env`.
+   - Validate incoming webhooks with shared secrets or HMAC signatures.
+
+Let me know if you'd like additional functionality or testing examples added!
